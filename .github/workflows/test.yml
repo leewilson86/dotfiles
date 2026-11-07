@@ -1,0 +1,40 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JSON
+        run: |
+          for f in claude/*.json; do
+            python3 -m json.tool "$f" > /dev/null && echo "ok $f"
+          done
+
+      - name: Lint scripts
+        run: shellcheck --severity=warning bootstrap.sh tests/*.sh
+
+      - name: Test bootstrap
+        run: bash tests/test-bootstrap.sh
+
+  # The work machine is a Mac, so test with the bash 3.2 and BSD tools it ships with.
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test bootstrap with /bin/bash (bash 3.2)
+        run: /bin/bash tests/test-bootstrap.sh
